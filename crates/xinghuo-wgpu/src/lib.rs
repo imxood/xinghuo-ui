@@ -11,12 +11,13 @@ use error::BackendError;
 use wgpu::{util::DeviceExt, Adapter, AdapterInfo, SurfaceError};
 
 pub use wgpu;
-pub mod window;
+use xinghuo_core::app::GpuDeviceInfo;
+// pub mod window;
 // mod pipeline;
 mod draw_pipe;
 mod shader_rectangle;
 mod shaders;
-mod shape;
+// mod shape;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -585,18 +586,4 @@ pub fn get_gpu_device_info(adapter: &Adapter) -> GpuDeviceInfo {
         device_type: format!("{:?}", device_type),
         backend: format!("{:?}", backend),
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct GpuDeviceInfo {
-    /// Adapter name
-    pub name: String,
-    /// Vendor PCI id of the adapter
-    pub vendor: usize,
-    /// PCI id of the adapter
-    pub device: usize,
-    /// Type of device
-    pub device_type: String,
-    /// Backend used for device
-    pub backend: String,
 }

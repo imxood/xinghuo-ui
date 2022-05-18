@@ -11,6 +11,8 @@ macro_rules! ui_style {
     };
 }
 
+use crate::DomNode;
+
 #[macro_export]
 macro_rules! attr_method {
     (
@@ -19,8 +21,31 @@ macro_rules! attr_method {
     ) => {
         $(#[$outer])*
         $publicity fn $attr(mut self, $attr: $attr_ty) -> Self {
-            use crate::DomNode;
-            self.dom_mut().style.$attr = $attr;
+            self.inner.borrow_mut().style.$attr = $attr;
+            self
+            // self.attribute(attr_name!($attr), to_set.to_string())
+        }
+    };
+    (
+        $(#[$outer:meta])*
+        $publicity:vis $attr:ident
+    ) => {
+        attr_method! {
+            $(#[$outer])*
+            $publicity $attr(bool)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! attr_into_method {
+    (
+        $(#[$outer:meta])*
+        $publicity:vis $attr:ident($attr_into_ty:ty)
+    ) => {
+        $(#[$outer])*
+        $publicity fn $attr(mut self, $attr: impl Into<$attr_into_ty>) -> Self {
+            self.inner.borrow_mut().style.$attr = $attr.into();
             self
             // self.attribute(attr_name!($attr), to_set.to_string())
         }
@@ -42,53 +67,33 @@ macro_rules! ui_element {
         $(#[$outer:meta])*
         <$name:ident>
 
-        $(children {
-            $(categories {
-                $($child_category:ident),+
-            })?
-        })?
+        $(block_type: $block_type:ty)?
 
-        $(attributes {
-            $(
-                $(#[$attr_meta:meta])*
-                $attr:ident ( $attr_ty:ty )
-                // $($publicity:vis)?
-            )*
-        })?
+        // $(children {
+        //     $(categories {
+        //         $($child_category:ident),+
+        //     })?
+        // })?
+
+        // $(attributes {
+        //     $(
+        //         $(#[$attr_meta:meta])*
+        //         $attr:ident ( $attr_ty:ty )
+        //         // $($publicity:vis)?
+        //     )*
+        // })?
+
+        // $(attributes_into {
+        //     $(
+        //         $(#[$attr_into_meta:meta])*
+        //         $attr_into:ident ( $attr_into_ty:ty )
+        //         // $($publicity:vis)?
+        //     )*
+        // })?
+
+        // block_type($block_type:ty)
     ) => {
         paste::item! {
-            $(impl [< $name:camel Builder >] {
-                $($crate::attr_method! {
-                    $(#[$attr_meta])*
-                    pub $attr($attr_ty)
-                })*
-            })?
-
-            pub struct [<$name:camel>] {
-                inner: rctree::Node<$crate::DomElement>,
-            }
-
-            impl [<$name:camel>] {
-                pub fn new(data: rctree::Node<$crate::DomElement>) -> Self {
-                    Self { inner: data }
-                }
-            }
-
-            impl $crate::DomNode for [<$name:camel>] {
-                fn dom_ref(&self) -> std::cell::Ref<$crate::DomElement> {
-                    self.inner.borrow()
-                }
-                fn dom_mut(&mut self) -> std::cell::RefMut<$crate::DomElement> {
-                    self.inner.borrow_mut()
-                }
-                fn node_ref(&self) -> & rctree::Node<$crate::DomElement> {
-                    &self.inner
-                }
-                fn node_mut(&mut self) -> &mut rctree::Node<$crate::DomElement> {
-                    &mut self.inner
-                }
-            }
-
             ///
             /// A type for initializing the element's attributes before calling `build`.
             #[must_use = "needs to be built"]
@@ -134,21 +139,6 @@ macro_rules! ui_element {
                 // }
             }
 
-            impl $crate::DomNode for [<$name:camel Builder>] {
-                fn dom_ref(&self) -> std::cell::Ref<$crate::DomElement> {
-                    self.inner.borrow()
-                }
-                fn dom_mut(&mut self) -> std::cell::RefMut<$crate::DomElement> {
-                    self.inner.borrow_mut()
-                }
-                fn node_ref(&self) -> & rctree::Node<$crate::DomElement> {
-                    &self.inner
-                }
-                fn node_mut(&mut self) -> &mut rctree::Node<$crate::DomElement> {
-                    &mut self.inner
-                }
-            }
-
             impl $crate::NodeBuilder for [<$name:camel Builder>] {
                 fn build(self) -> rctree::Node<$crate::DomElement> {
                     self.inner
@@ -164,6 +154,45 @@ macro_rules! ui_element {
 
             pub fn $name() -> [<$name:camel Builder>] {
                 [<$name:camel Builder>]::default()
+            }
+
+            $(impl [< $name:camel Builder >] {
+                $($crate::attr_method! {
+                    $(#[$attr_meta])*
+                    pub $attr($attr_ty)
+                })*
+            })?
+
+            $(impl [< $name:camel Builder >] {
+                $($crate::attr_into_method! {
+                    $(#[$attr_into_meta])*
+                    pub $attr_into( $attr_into_ty )
+                })*
+            })?
+
+            pub struct [<$name:camel>] {
+                inner: rctree::Node<$crate::DomElement>,
+            }
+
+            impl [<$name:camel>] {
+                pub fn new(data: rctree::Node<$crate::DomElement>) -> Self {
+                    Self { inner: data }
+                }
+            }
+
+            impl $crate::DomNode for [<$name:camel>] {
+                fn dom_ref(&self) -> std::cell::Ref<$crate::DomElement> {
+                    self.inner.borrow()
+                }
+                fn dom_mut(&mut self) -> std::cell::RefMut<$crate::DomElement> {
+                    self.inner.borrow_mut()
+                }
+                fn node_ref(&self) -> & rctree::Node<$crate::DomElement> {
+                    &self.inner
+                }
+                fn node_mut(&mut self) -> &mut rctree::Node<$crate::DomElement> {
+                    &mut self.inner
+                }
             }
         }
     };

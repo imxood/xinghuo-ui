@@ -1,7 +1,6 @@
 mod element;
 mod ui_view;
 
-use element::parse_ui_element;
 use ui_view::parse_ui_view;
 
 use proc_macro::TokenStream;

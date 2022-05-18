@@ -2,10 +2,7 @@ use std::mem::size_of;
 
 use wgpu::{util::DeviceExt, SurfaceConfiguration};
 
-use crate::{
-    shaders::ShaderManager,
-    shape::{RectShape, Shape},
-};
+use crate::shaders::ShaderManager;
 
 // #[repr(C)]
 // #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -147,7 +144,7 @@ impl Pipeline {
         }
     }
 
-    pub fn add_shape(&mut self, device: &wgpu::Device, shape: RectShape) {
+    pub fn add_shape(&mut self, device: &wgpu::Device /* shape: RectShape */) {
         if self.buffer.is_none() {
             let data: &[u8] = bytemuck::cast_slice(VERTICES);
             let buffer_size = data.len();

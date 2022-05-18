@@ -1,4 +1,4 @@
-# xinghuo-ui
+# xinghuo-core
 
 后端指的是 屏幕控制.
 

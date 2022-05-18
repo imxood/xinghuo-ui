@@ -1,7 +1,27 @@
+[package]
+name = "xinghuo-ui"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+# 默认使用wgpu后端
+default = []
+
+wgpu = ["xinghuo-wgpu"]
+
+
+[dependencies]
+xinghuo-core = { path = "crates/xinghuo-core" }
+xinghuo-wgpu = { path = "crates/xinghuo-wgpu", optional = true }
+
 [workspace]
 resolver = "2"
 members = [
     "crates/xinghuo-wgpu",
-    "crates/xinghuo-ui",
+    "crates/xinghuo-core",
     "crates/xinghuo-macro",
+    "crates/xinghuo-geom",
 ]
+
+[dev-dependencies]
+rctree = "0.4.0"

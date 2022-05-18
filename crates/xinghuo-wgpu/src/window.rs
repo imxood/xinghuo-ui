@@ -1,6 +1,5 @@
 use std::{collections::HashMap, iter};
 
-use cgmath::{Point2, Vector2};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
@@ -153,6 +152,7 @@ impl EventHandle {
                     shape.rect.pos = Point2 { x: 0.0, y: 0.0 };
                     shape.rect.size = Vector2 { x: 100.0, y: 100.0 };
                     let shapes = vec![Shape::Rect(shape)];
+
                     viewport.render(shapes, shared);
                     // let frame = viewport.get_current_texture();
                     // let view = frame
