@@ -12,7 +12,7 @@ use wgpu::{util::DeviceExt, Adapter, AdapterInfo, SurfaceError};
 
 pub use wgpu;
 use xinghuo_core::app::GpuDeviceInfo;
-// pub mod window;
+pub mod window;
 // mod pipeline;
 mod draw_pipe;
 mod shader_rectangle;

@@ -6,11 +6,7 @@ use winit::{
     window::{Window, WindowBuilder, WindowId},
 };
 
-use crate::{
-    draw_pipe::DrawPipe,
-    shaders::ShaderManager,
-    shape::{RectShape, Shape},
-};
+use crate::{draw_pipe::DrawPipe, shaders::ShaderManager};
 
 struct ViewportDesc {
     pub window: Window,

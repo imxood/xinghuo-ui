@@ -68,6 +68,11 @@ impl Default for Color {
 }
 
 impl Color {
+    pub const RED: Self = Self([0xff, 0x00, 0x00, 0xff]);
+    pub const GLEEN: Self = Self([0x00, 0xff, 0x00, 0xff]);
+    pub const BLUE: Self = Self([0x00, 0x00, 0xff, 0xff]);
+    pub const YELLOW: Self = Self([0xff, 0xff, 0x00, 0xff]);
+
     #[inline(always)]
     pub fn r(&self) -> u8 {
         self.0[0]

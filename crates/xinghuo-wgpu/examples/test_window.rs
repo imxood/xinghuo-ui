@@ -1,5 +1,3 @@
-use xinghuo_wgpu::window::run_native;
-
 fn main() {
     init_log();
     run_native("星火UI");
