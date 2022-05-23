@@ -88,7 +88,7 @@ impl App {
                                 // 更新盒子轮廓
                                 cdom.set_margin(cdom.margin().update(parent_size));
                                 cdom.set_padding(cdom.padding().update(parent_size));
-                                cdom.set_border(cdom.border().update(parent_size));
+                                cdom.set_border_width(cdom.border_width().update(parent_size));
 
                                 // 当前节点的宽度 = 父节点的宽度 - 当前节点的边沿宽度
                                 cdom.set_width(parent_size.x - cdom.edge_width());
@@ -131,9 +131,9 @@ impl App {
                     node.paint(painter);
                 }
                 TreeNodeEdge::End(node) => {
-                    let node = node.borrow();
-                    let dom = node.dom();
-                    println!("</{}>: {:?}", dom.tag(), node.node_id());
+                    // let node = node.borrow();
+                    // let dom = node.dom();
+                    // println!("</{}>: {:?}", dom.tag(), node.node_id());
                 }
             }
         }

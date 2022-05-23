@@ -196,9 +196,7 @@ impl Pipeline {
         let instances_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("quad instance buffer"),
             size: std::mem::size_of::<Quad>() as u64 * 100_000 as u64,
-            usage: wgpu::BufferUsages::VERTEX
-                | wgpu::BufferUsages::UNIFORM
-                | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -237,6 +235,8 @@ impl Pipeline {
             bytemuck::cast_slice(&instances[..]),
         );
 
+        let inctence_len = instances.len();
+
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
@@ -265,10 +265,12 @@ impl Pipeline {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.globals_bind_group, &[]);
+
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instances_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.index_len, 0, 0..1);
+
+            render_pass.draw_indexed(0..self.index_len, 0, 0..inctence_len as u32);
         }
 
         queue.submit(iter::once(encoder.finish()));

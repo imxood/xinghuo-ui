@@ -1,16 +1,15 @@
-use xinghuo_core::{app::AppBuilder, element::Element, Layout};
+use xinghuo_core::{app::AppBuilder, element::Element, prelude::Color, Layout};
 use xinghuo_wgpu::window::Window;
 
 fn main() {
     init_log();
-    Window::new(AppBuilder::new(div().children(vec![
-        header(),
-        center(),
-        footer(),
-    ])))
-    .title("hello")
-    .size([800, 600])
-    .run();
+
+    let ele = div().children(vec![header(), center(), footer()]);
+
+    Window::new(AppBuilder::new(ele))
+        .title("hello")
+        .size([1600, 1000])
+        .run();
 }
 
 /*
@@ -28,21 +27,33 @@ fn span() -> Element {
 }
 
 fn header() -> Element {
-    div().width("100%").height("30").onclick(|clicked| {
-        println!("{:?}", &clicked);
-    })
+    div()
+        .width("100%")
+        .height("30")
+        .background_color(Color::RED)
+        .onclick(|clicked| {
+            println!("{:?}", &clicked);
+        })
 }
 
 fn center() -> Element {
-    div().width("100%").height("100%").onclick(|clicked| {
-        println!("{:?}", &clicked);
-    })
+    div()
+        .width("100%")
+        .height("100%")
+        .background_color(Color::YELLOW)
+        .onclick(|clicked| {
+            println!("{:?}", &clicked);
+        })
 }
 
 fn footer() -> Element {
-    div().width("100%").height("30").onclick(|clicked| {
-        println!("{:?}", &clicked);
-    })
+    div()
+        .width("100%")
+        .height("30")
+        .background_color(Color::BLUE)
+        .onclick(|clicked| {
+            println!("{:?}", &clicked);
+        })
 }
 
 /// 初始化日志

@@ -50,10 +50,8 @@ pub trait RenderObject: Debug {
 
     fn paint(&mut self, painter: &mut Box<dyn Painter>) {
         let dom = self.dom();
-        let rect = &[
-            Quad::new(dom.ava_box().to_rect(), Color::YELLOW),
-            Quad::new(dom.ava_box().to_rect(), Color::RED),
-        ];
+        let rect = &[Quad::new(dom.ava_box().to_rect(), dom.background_color())];
+        println!("paint rect {:?}", rect);
         painter.rect(rect);
     }
 
@@ -99,6 +97,11 @@ impl Element {
 
     pub fn height(mut self, height: impl Into<Size>) -> Self {
         self.dom.set_height(height);
+        self
+    }
+
+    pub fn background_color(mut self, background_color: impl Into<Color>) -> Self {
+        self.dom.set_background_color(background_color);
         self
     }
 

@@ -85,10 +85,11 @@ pub struct Style {
 
     pub padding: Quat,
     pub margin: Quat,
-    pub border: Quat,
 
+    pub border_width: Quat,
     pub border_radius: Quat,
     pub border_color: Color,
+
     pub background_color: Color,
 }
 
@@ -188,8 +189,8 @@ impl DomElement {
     }
 
     #[inline]
-    pub fn set_border(&mut self, border: impl Into<Quat>) {
-        self.style.border = border.into();
+    pub fn set_border_width(&mut self, border_width: impl Into<Quat>) {
+        self.style.border_width = border_width.into();
         self.dirty = true;
     }
 
@@ -254,7 +255,7 @@ impl DomElement {
 
     pub fn edge_width(&self) -> f32 {
         let margin = self.margin();
-        let border = self.border();
+        let border = self.border_width();
         let padding = self.padding();
         (margin.left()
             + margin.right()
@@ -267,7 +268,7 @@ impl DomElement {
 
     pub fn edge_height(&self) -> f32 {
         let margin = self.margin();
-        let border = self.border();
+        let border = self.border_width();
         let padding = self.padding();
         (margin.top()
             + margin.bottom()
@@ -281,7 +282,7 @@ impl DomElement {
     /// 盒子 左上角坐标
     pub fn left_top(&self) -> Vec2 {
         let margin = self.margin();
-        let border = self.border();
+        let border = self.border_width();
         let padding = self.padding();
         vec2(
             (margin.left() + border.left() + padding.left()).into(),
@@ -323,8 +324,8 @@ impl DomElement {
     }
 
     #[inline]
-    pub fn border(&self) -> Quat {
-        self.style.border
+    pub fn border_width(&self) -> Quat {
+        self.style.border_width
     }
 
     #[inline]
