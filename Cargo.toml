@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-# 默认使用wgpu后端
-default = []
+# 默认使用wgpu作为渲染层
+default = ["wgpu"]
 
+# 当前仅实现了 wgpu后端
 wgpu = ["xinghuo-wgpu"]
 
 

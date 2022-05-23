@@ -1,9 +1,51 @@
+use xinghuo_core::{app::AppBuilder, element::Element, Layout};
+use xinghuo_wgpu::window::Window;
+
 fn main() {
     init_log();
-    run_native("星火UI");
+    Window::new(AppBuilder::new(div().children(vec![
+        header(),
+        center(),
+        footer(),
+    ])))
+    .title("hello")
+    .size([800, 600])
+    .run();
 }
 
+/*
+    创建节点树: 渲染对象树, 事件树, 数据树
+*/
 
+fn div() -> Element {
+    Element::new("div")
+}
+
+fn span() -> Element {
+    let mut span = Element::new("span");
+    span.dom.set_layout(Layout::Inline);
+    span
+}
+
+fn header() -> Element {
+    div().width("100%").height("30").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
+}
+
+fn center() -> Element {
+    div().width("100%").height("100%").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
+}
+
+fn footer() -> Element {
+    div().width("100%").height("30").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
+}
+
+/// 初始化日志
 pub fn init_log() {
     std::env::set_var("RUST_LOG", "xinghuo_wgpu=INFO");
 

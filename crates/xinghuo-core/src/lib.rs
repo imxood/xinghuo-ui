@@ -8,12 +8,15 @@ pub mod error;
 pub mod event;
 mod layer;
 // pub mod macros;
-pub mod draw;
+pub mod element;
 pub mod id;
 mod memory;
 pub mod node;
+pub mod painter;
 
-use id::IdPath;
+use geom::color::Color;
+use geom::glam::Vec2;
+use id::Id;
 use rctree::Node;
 use std::fmt::Debug;
 use std::ops::Add;
@@ -21,47 +24,24 @@ use std::ops::AddAssign;
 use std::ops::Sub;
 
 pub mod prelude {
-    pub use crate::draw::DrawIface;
     pub use crate::event::*;
+    pub use crate::painter::Painter;
+    pub use crate::Layout;
     pub use crate::NodeBuilder;
+    pub use crate::Style;
     pub use crate::Value;
 
     // pub use crate::ui_element;
-    pub use euclid;
     pub use lyon;
     pub use paste;
     pub use rctree;
-    pub use xinghuo_macro::ui_view;
+    pub use rctree::Node as TreeNode;
+    pub use rctree::NodeEdge as TreeNodeEdge;
 
     pub use xinghuo_geom as geom;
+    pub use xinghuo_macro::ui_view;
 
     pub use geom::*;
-}
-
-pub use euclid::default::Point2D as Point2;
-pub use euclid::default::Size2D as Size2;
-pub use euclid::default::Vector2D as Vector2;
-
-pub use euclid::default::Box2D;
-pub type Transform<S> = euclid::default::Transform2D<S>;
-pub type Rotation<S> = euclid::default::Rotation2D<S>;
-pub type Translation<S> = euclid::Translation2D<S, euclid::UnknownUnit, euclid::UnknownUnit>;
-pub use euclid::default::Scale;
-pub use euclid::Angle;
-
-#[inline]
-pub fn vector2<S>(x: S, y: S) -> Vector2<S> {
-    Vector2::new(x, y)
-}
-
-#[inline]
-pub fn point2<S>(x: S, y: S) -> Point2<S> {
-    Point2::new(x, y)
-}
-
-#[inline]
-pub fn size2<S>(w: S, h: S) -> Size2<S> {
-    Size2::new(w, h)
 }
 
 use crate::prelude::*;
@@ -74,6 +54,7 @@ pub trait NodeBuilder {
     fn build(self) -> Node<DomElement>;
 }
 
+///
 #[derive(Debug, Clone, Copy)]
 pub enum Layout {
     /// 无法设置宽和高
@@ -114,7 +95,7 @@ pub struct Style {
 #[derive(Debug, Clone)]
 pub struct DomElement {
     /// 用于标记 Dom 在 Tree 上的位置
-    id_path: IdPath,
+    node_id: Id,
     /// 节点名称
     tag: String,
     /// 节点Id
@@ -128,29 +109,29 @@ pub struct DomElement {
     /// 节点样式 changed 标志
     dirty: bool,
     /// 节点在屏幕坐标系中的位置, 宽度和高度是 有效的宽度和高度, 不是盒子的宽度和高度
-    area: Box2<Size>,
+    ava_box: Box2,
     /// 父节点尺寸
-    parent_size: Size2<f32>,
+    parent_size: Vec2,
 }
 
 impl DomElement {
-    pub fn new(tag: impl ToString, id_path: IdPath) -> Self {
+    pub fn new(tag: impl ToString) -> Self {
         Self {
-            id_path,
+            node_id: Id::next(),
             id: String::new(),
             class: Vec::new(),
             tag: tag.to_string(),
             layout: Layout::default(),
             style: Style::default(),
             dirty: true,
-            area: Box2::default(),
-            parent_size: Size2::default(),
+            ava_box: Box2::default(),
+            parent_size: Vec2::default(),
         }
     }
 
     #[inline]
-    pub fn id_path(&self) -> &IdPath {
-        &self.id_path
+    pub fn node_id(&self) -> Id {
+        self.node_id
     }
 
     #[inline]
@@ -171,14 +152,14 @@ impl DomElement {
     }
 
     #[inline]
-    pub fn set_parent_size(&mut self, parent_size: Size2<f32>) {
+    pub fn set_parent_size(&mut self, parent_size: Vec2) {
         self.parent_size = parent_size;
         self.dirty = true;
     }
 
     #[inline]
-    pub fn set_area(&mut self, area: Box2<Size>) {
-        self.area = area;
+    pub fn set_ava_box(&mut self, ava_box: Box2) {
+        self.ava_box = ava_box;
         self.dirty = true;
     }
 
@@ -236,84 +217,98 @@ impl DomElement {
     }
 
     #[inline]
-    pub fn parent_size(&self) -> Size2<f32> {
+    pub fn parent_size(&self) -> Vec2 {
         self.parent_size
     }
 
     #[inline]
-    pub fn area(&self) -> Box2<Size> {
-        self.area
+    pub fn ava_box(&self) -> Box2 {
+        self.ava_box
     }
 
     #[inline]
-    pub fn width(&self) -> Size {
-        self.style.width
+    pub fn width(&self) -> f32 {
+        self.style.width.into()
     }
 
     #[inline]
-    pub fn height(&self) -> Size {
-        self.style.height
+    pub fn update_width(&mut self, parent_width: f32) {
+        let width = &mut self.style.width;
+        *width = width.update(parent_width);
     }
 
-    pub fn edge_width(&self) -> Size {
+    #[inline]
+    pub fn height(&self) -> f32 {
+        self.style.height.into()
+    }
+
+    #[inline]
+    pub fn update_height(&mut self, parent_hight: f32) {
+        let height = &mut self.style.height;
+        *height = height.update(parent_hight);
+    }
+
+    pub fn size(&self) -> Vec2 {
+        [self.style.width.into(), self.style.height.into()].into()
+    }
+
+    pub fn edge_width(&self) -> f32 {
         let margin = self.margin();
         let border = self.border();
         let padding = self.padding();
-        margin.left()
+        (margin.left()
             + margin.right()
             + border.left()
             + border.right()
             + padding.left()
-            + padding.right()
+            + padding.right())
+        .into()
     }
 
-    pub fn edge_height(&self) -> Size {
+    pub fn edge_height(&self) -> f32 {
         let margin = self.margin();
         let border = self.border();
         let padding = self.padding();
-        margin.top()
+        (margin.top()
             + margin.bottom()
             + border.top()
             + border.bottom()
             + padding.top()
-            + padding.bottom()
+            + padding.bottom())
+        .into()
     }
 
     /// 盒子 左上角坐标
-    pub fn left_top(&self) -> Vector2<Size> {
+    pub fn left_top(&self) -> Vec2 {
         let margin = self.margin();
         let border = self.border();
         let padding = self.padding();
-        vector2(
-            margin.left() + border.left() + padding.left(),
-            margin.top() + border.top() + padding.top(),
+        vec2(
+            (margin.left() + border.left() + padding.left()).into(),
+            (margin.top() + border.top() + padding.top()).into(),
         )
     }
 
     /// 盒子 右下角坐标
-    pub fn right_bottom(&self) -> Vector2<Size> {
-        self.left_top() + vector2(self.width(), self.height())
-        // vector2(
-        //     margin.left() + border.left() + padding.left(),
-        //     margin.right() + border.right() + padding.right(),
-        // )
+    pub fn right_bottom(&self) -> Vec2 {
+        self.left_top() + vec2(self.width(), self.height())
     }
 
     /// box坐标
     #[inline]
-    pub fn box_rect(&self) -> Box2<Size> {
-        let start = self.area.min - self.left_top();
-        let end = start + vector2(self.box_width(), self.box_height());
+    pub fn box_rect(&self) -> Box2 {
+        let start = self.ava_box.min - self.left_top();
+        let end = start + vec2(self.box_width(), self.box_height());
         box2(start, end)
     }
 
     #[inline]
-    pub fn box_width(&self) -> Size {
+    pub fn box_width(&self) -> f32 {
         self.width() + self.edge_width()
     }
 
     #[inline]
-    pub fn box_height(&self) -> Size {
+    pub fn box_height(&self) -> f32 {
         self.height() + self.edge_height()
     }
 
@@ -438,8 +433,8 @@ impl Size {
         }
     }
 
-    pub fn update(mut self, max_value: impl Into<Self>) -> Self {
-        let max_value = max_value.into().value();
+    /// 在布局后, 会使用有效值 更新实际的 Size.value
+    pub fn update(mut self, max_value: f32) -> Self {
         let value = match self.param {
             InnerSize::Number(n) => {
                 if max_value == 0.0 {
@@ -526,11 +521,11 @@ impl PartialOrd for Size {
 }
 
 pub trait Convert {
-    fn convert_size(self) -> Box2<f32>;
+    fn convert_size(self) -> Box2;
 }
 
-impl Convert for Box2<Size> {
-    fn convert_size(self) -> Box2<f32> {
+impl Convert for Box2 {
+    fn convert_size(self) -> Box2 {
         box2(
             point2(self.min.x.into(), self.min.y.into()),
             point2(self.max.x.into(), self.max.y.into()),
@@ -546,11 +541,11 @@ impl Convert for Box2<Size> {
 pub struct Quat(pub [Size; 4]);
 
 impl Quat {
-    pub fn update(mut self, max_size: [Size; 2]) -> Self {
-        self.0[0] = self.0[0].update(max_size[0]);
-        self.0[1] = self.0[1].update(max_size[1]);
-        self.0[2] = self.0[2].update(max_size[0]);
-        self.0[3] = self.0[3].update(max_size[1]);
+    pub fn update(mut self, max_size: Vec2) -> Self {
+        self.0[0] = self.0[0].update(max_size.x);
+        self.0[1] = self.0[1].update(max_size.y);
+        self.0[2] = self.0[2].update(max_size.x);
+        self.0[3] = self.0[3].update(max_size.y);
         self
     }
 

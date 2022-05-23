@@ -7,4 +7,9 @@ edition = "2021"
 crate-type = ["rlib"]
 
 [dependencies]
-euclid = "0.22.7"
+glam = { version = "0.20.5", features = ["bytemuck"] }
+bytemuck = { version = "1.9.1", features = ["derive"] }
+
+[features]
+default = ["bytemuck"]
+bytemuck = []

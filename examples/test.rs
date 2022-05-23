@@ -5,14 +5,15 @@ use std::{
 };
 
 use xinghuo_core::{
-    draw::DrawDummy,
+    app::{App, AppBuilder},
+    element::{Element, RenderCx},
     event::*,
     id::{Id, IdPath},
+    painter::DrawDummy,
     prelude::{euclid::vec2, *},
     Convert, DomElement, Layout, Size, Style,
 };
 
-use rctree::Node as TreeNode;
 use rctree::NodeEdge as TreeNodeEdge;
 
 #[derive(Default, Debug)]
@@ -51,243 +52,14 @@ impl Map {
     }
 }
 
-impl Event {
-    pub fn is_empty(&self) -> bool {
-        let Self {
-            onclick,
-            onmouseenter,
-            onmouseleave,
-            onmousemove,
-            onmouseout,
-            onmouseover,
-            onmouseup,
-        } = self;
-        onclick.is_none()
-            && onmouseenter.is_none()
-            && onmouseleave.is_none()
-            && onmousemove.is_none()
-            && onmouseout.is_none()
-            && onmouseover.is_none()
-            && onmouseup.is_none()
-    }
-}
-macro_rules! debug_event_field {
-    ($debug:ident, $($name:ident),*) => {
-        $(
-            if $name.is_some() {
-                $debug.field(stringify!($name), &"Some");
-            }
-        )*
-    };
-}
-impl Debug for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {
-            onclick,
-            onmouseenter,
-            onmouseleave,
-            onmousemove,
-            onmouseout,
-            onmouseover,
-            onmouseup,
-        } = self;
-
-        // let a = &format("{:?}", self.onclick.as_ref().map(|_| ()))[..4];
-        let mut debug = f.debug_struct("Events");
-        debug_event_field!(
-            debug,
-            onclick,
-            onmouseenter,
-            onmouseleave,
-            onmousemove,
-            onmouseout,
-            onmouseover,
-            onmouseup
-        );
-        debug.finish()
-    }
+fn div() -> Element {
+    Element::new("div")
 }
 
-pub trait RenderObject: Debug {
-    /// 根据当前节点的布局, 计算子节点样式
-    fn layout(&mut self, parent: &DomElement) {
-        let dom = self.dom_mut();
-        if dom.is_dirty() {
-            // 布局
-            match parent.layout() {
-                Layout::Inline => {}
-                Layout::InlineBlock => {}
-                Layout::Block => {}
-                Layout::RowFlex => todo!(),
-                Layout::ColFlex => todo!(),
-            }
-            dom.set_dirty(false);
-        }
-    }
-
-    fn paint(&mut self, cx: &mut RenderCx) {
-        let dom = self.dom();
-        cx.draw.rect(dom.area().convert_size(), Color::YELLOW);
-        cx.draw.rect(dom.box_rect().convert_size(), Color::RED);
-    }
-
-    fn dom(&self) -> &DomElement;
-
-    fn dom_mut(&mut self) -> &mut DomElement;
-
-    fn id_path(&self) -> &IdPath;
-}
-
-pub struct DataObject {
-    pub id_path: IdPath,
-    pub data: Box<dyn Any>,
-}
-
-pub struct EventObject {
-    pub id_path: IdPath,
-    pub event: Event,
-}
-
-pub struct NodeBuilder {
-    pub dom: DomElement,
-    pub event: Option<Event>,
-    pub data: Option<Box<dyn Any>>,
-}
-
-#[derive(Default)]
-pub struct Event {
-    pub onclick: Option<Box<dyn FnMut(Click)>>,
-    pub onmouseenter: Option<Box<dyn FnMut(MouseEnter)>>,
-    pub onmouseleave: Option<Box<dyn FnMut(MouseLeave)>>,
-    pub onmousemove: Option<Box<dyn FnMut(MouseMove)>>,
-    pub onmouseout: Option<Box<dyn FnMut(MouseOut)>>,
-    pub onmouseover: Option<Box<dyn FnMut(MouseOver)>>,
-    pub onmouseup: Option<Box<dyn FnMut(MouseUp)>>,
-}
-
-impl NodeBuilder {
-    pub fn new(id_path: IdPath, tag: impl ToString) -> Self {
-        let dom = DomElement::new(tag, id_path);
-        Self {
-            dom,
-            event: None,
-            data: None,
-        }
-    }
-
-    pub fn onclick(mut self, onclick: impl FnMut(Click) + 'static) -> Self {
-        if self.event.is_none() {
-            self.event = Some(Event::default());
-        }
-        if let Some(event) = self.event.as_mut() {
-            event.onclick = Some(Box::new(onclick));
-        }
-        self
-    }
-
-    pub fn width(mut self, width: impl Into<Size>) -> Self {
-        self.dom.set_width(width);
-        self
-    }
-
-    pub fn height(mut self, height: impl Into<Size>) -> Self {
-        self.dom.set_height(height);
-        self
-    }
-
-    pub fn data(mut self, data: impl Any) -> Self {
-        let data: Box<dyn Any> = Box::new(data);
-        self.data = Some(data);
-        self
-    }
-
-    pub fn build(
-        self,
-    ) -> (
-        TreeNode<Box<dyn RenderObject>>,
-        Option<TreeNode<EventObject>>,
-        Option<TreeNode<DataObject>>,
-    ) {
-        let Self { dom, event, data } = self;
-        let id_path = dom.id_path().clone();
-
-        let render_object: Box<dyn RenderObject> = Box::new(Node { dom });
-
-        let render_node = TreeNode::new(render_object);
-        let event_node = if let Some(event) = event {
-            Some(TreeNode::new(EventObject {
-                id_path: id_path.clone(),
-                event,
-            }))
-        } else {
-            None
-        };
-        let data_node = if let Some(data) = data {
-            Some(TreeNode::new(DataObject {
-                id_path: id_path.clone(),
-                data,
-            }))
-        } else {
-            None
-        };
-
-        (render_node, event_node, data_node)
-    }
-}
-
-fn div(id_path: IdPath) -> NodeBuilder {
-    NodeBuilder::new(id_path, "div")
-}
-
-fn span(id_path: IdPath) -> NodeBuilder {
-    let mut span = NodeBuilder::new(id_path, "span");
+fn span() -> Element {
+    let mut span = Element::new("span");
     span.dom.set_layout(Layout::Inline);
     span
-}
-
-#[derive(Debug)]
-pub struct Node {
-    dom: DomElement,
-}
-
-impl Node {
-    fn new(id_path: IdPath) -> Self {
-        Self {
-            dom: DomElement::new("div", id_path),
-        }
-    }
-}
-
-impl RenderObject for Node {
-    #[inline]
-    fn dom(&self) -> &DomElement {
-        &self.dom
-    }
-
-    #[inline]
-    fn dom_mut(&mut self) -> &mut DomElement {
-        &mut self.dom
-    }
-
-    #[inline]
-    fn id_path(&self) -> &IdPath {
-        self.dom.id_path()
-    }
-}
-
-#[derive(Default)]
-pub struct RenderTree {
-    inner: Option<TreeNode<Box<dyn RenderObject>>>,
-}
-
-impl RenderTree {
-    pub fn child(&mut self, node: impl RenderObject + 'static) {
-        let node: Box<dyn RenderObject> = Box::new(node);
-        let node = TreeNode::new(node);
-        if let Some(nodes) = self.inner.as_mut() {
-            nodes.append(node);
-        }
-    }
 }
 
 struct Cx {
@@ -324,55 +96,21 @@ impl Cx {
     }
 }
 
-pub struct LayoutCx {
-    pub area: Box2<f32>,
-    pub cursor: Box2<f32>,
+pub struct Window {
+    window_width: f32,
+    window_height: f32,
+    title: String,
 }
 
-pub struct RenderCx<'a> {
-    pub window_width: f32,
-    pub window_height: f32,
-    pub data_tree: &'a mut Option<TreeNode<DataObject>>,
-    pub draw: &'a mut Box<dyn DrawIface>,
-}
-
-pub struct App {
-    pub event_tree: Option<TreeNode<EventObject>>,
-    pub data_tree: Option<TreeNode<DataObject>>,
-    pub render_tree: TreeNode<Box<dyn RenderObject>>,
-    pub draw: Box<dyn DrawIface>,
-}
-
-impl App {
-    pub fn run(&mut self) {}
-}
-
-pub struct AppBuilder {
-    builder: NodeBuilder,
-    draw: Box<dyn DrawIface>,
-}
-
-impl AppBuilder {
-    pub fn new(builder: NodeBuilder) -> Self {
+impl Window {
+    pub fn new(title: impl Into<String>) -> Self {
         Self {
-            builder,
-            draw: Box::new(DrawDummy::default()),
+            window_width: 800.,
+            window_height: 600.,
+            title: title.into(),
         }
     }
-    pub fn with_draw(mut self, draw: impl DrawIface + 'static) -> Self {
-        self.draw = Box::new(draw);
-        self
-    }
-    pub fn build(self) -> App {
-        let Self { builder, draw } = self;
-        let (render_tree, event_tree, data_tree) = builder.build();
-        App {
-            event_tree,
-            data_tree,
-            render_tree,
-            draw,
-        }
-    }
+    pub fn run(self, app_builder: AppBuilder) {}
 }
 
 fn main() {
@@ -394,77 +132,26 @@ fn main() {
         node1
     }
 
-    /*
-        创建节点树: 渲染对象树, 事件树, 数据树
-    */
-
-    let (mut render_tree, mut event_tree, mut data_tree) = cx.with_id(Id::next(), |cx| {
-        let id_path = cx.id_path().clone();
-        let (mut render_node, event_node, data_node) = div(id_path)
+    let mut app = AppBuilder::new(
+        div()
             .width(window_width)
             .height(window_height)
-            .onclick(|clicked| {
-                println!("clicked: {:?}", &clicked);
-            })
-            .build();
+            .children(vec![header(), center(), footer()]),
+    );
 
-        // 创建第一个 一级子节点
-        let (child_render_node, child_event_node, child_data_node) = cx.with_id(Id::next(), |cx| {
-            let id_path = cx.id_path().clone();
-            let (mut render_node, event_node, data_node) =
-                div(id_path).width(500.0).height(500.0).data(1).build();
+    let App {
+        mut event_tree,
+        mut data_tree,
+        mut render_tree,
+        painter,
+    } = app.build();
 
-            // 创建第一个 二级子节点
-            let (child_render_node, child_event_node, child_data_node) =
-                cx.with_id(Id::next(), |cx| {
-                    let id_path = cx.id_path().clone();
-
-                    let (mut render_node, event_node, data_node) =
-                        div(id_path).width(300.0).height(300.0).data(2).build();
-
-                    // 创建第一个 三级子节点
-                    let (child_render_node, child_event_node, child_data_node) =
-                        cx.with_id(Id::next(), |cx| {
-                            let id_path = cx.id_path().clone();
-                            let (render_node, event_node, data_node) =
-                                span(id_path).width(100.0).height(100.0).data(2).build();
-                            (render_node, event_node, data_node)
-                        });
-                    render_node.append(child_render_node);
-                    let event_node = merge_option_node(event_node, child_event_node);
-                    let data_node = merge_option_node(data_node, child_data_node);
-
-                    (render_node, event_node, data_node)
-                });
-            render_node.append(child_render_node);
-            let event_node = merge_option_node(event_node, child_event_node);
-            let data_node = merge_option_node(data_node, child_data_node);
-
-            // 添加第一个 二级节点
-            let (child_render_node, child_event_node, child_data_node) =
-                cx.with_id(Id::next(), |cx| {
-                    let id_path = cx.id_path().clone();
-                    let (render_node, event_node, data_node) =
-                        div(id_path).width(150.0).height(150.0).data(2).build();
-                    (render_node, event_node, data_node)
-                });
-            render_node.append(child_render_node);
-            let event_node = merge_option_node(event_node, child_event_node);
-            let data_node = merge_option_node(data_node, child_data_node);
-            (render_node, event_node, data_node)
-        });
-        render_node.append(child_render_node);
-        let event_node = merge_option_node(event_node, child_event_node);
-        let data_node = merge_option_node(data_node, child_data_node);
-        (render_node, event_node, data_node)
-    });
-
-    let mut draw: Box<dyn DrawIface> = Box::new(DrawDummy {});
+    let mut painter: Box<dyn Painter> = Box::new(DummyPainter {});
 
     let mut render_ctx = RenderCx {
         window_width,
         window_height,
-        draw: &mut draw,
+        painter: &mut painter,
         data_tree: &mut data_tree,
     };
 
@@ -478,34 +165,13 @@ fn main() {
         dom.set_layout(Layout::Block);
         dom.set_width(window_width);
         dom.set_height(window_height);
-        dom.set_area(Box2::new(
-            point2(Size::new_value(0.0), Size::new_value(0.0)),
-            point2(
-                Size::new_value(window_width),
-                Size::new_value(window_height),
-            ),
-        ));
+        dom.set_ava_box(Box2::new(vec2(0.0, 0.0), vec2(window_width, window_width)));
     }
 
     /*
         执行布局
     */
 
-    // 遍历渲染树
-    // let cursor = ;
-    // let mut layout_cx = LayoutCx {
-    //     area: box2(point2(0., 0.), point2(window_width, window_height)),
-    //     cursor: Box2::new(point2(0., 0.), point2(window_width, window_height)),
-    // };
-
-    // 在一个布局中, Cursor移动, 用于记录下一个 布局内节点 的起始位置, 布局结束后, Cursor会移动到下一个布局的开头
-    // let mut cursor = Box2::new(
-    //     point2(Size::zero(), Size::zero()),
-    //     point2(
-    //         Size::new_value(window_width),
-    //         Size::new_value(window_height),
-    //     ),
-    // );
     for node in render_tree.traverse() {
         match node {
             TreeNodeEdge::Start(mut node) => {
@@ -562,9 +228,9 @@ fn main() {
                 let parent_dom = parent_node.dom();
                 let dom = node.dom_mut();
                 println!(
-                    "<{:?}> -- id_path: {:?} width: {:?} height: {:?}",
+                    "<{:?}> -- node_id: {:?} width: {:?} height: {:?}",
                     dom.tag(),
-                    dom.id_path(),
+                    dom.node_id(),
                     dom.width(),
                     dom.height()
                 );
@@ -574,7 +240,7 @@ fn main() {
             TreeNodeEdge::End(node) => {
                 let node = node.borrow();
                 let dom = node.dom();
-                println!("</{}>: {:?}", dom.tag(), node.id_path());
+                println!("</{}>: {:?}", dom.tag(), node.node_id());
             }
         }
     }
@@ -586,8 +252,9 @@ fn main() {
                 TreeNodeEdge::Start(node) => {
                     let node = node.borrow();
                     println!(
-                        "event node -- id_path: {:?} event: {:?}",
-                        &node.id_path, &node.event
+                        "event node -- node_id: {:?} event: {:?}",
+                        &node.node.borrow().node_id(),
+                        &node.event
                     );
                 }
                 _ => {}
@@ -602,12 +269,35 @@ fn main() {
                 TreeNodeEdge::Start(node) => {
                     let node = node.borrow();
                     println!(
-                        "data node -- id_path: {:?} data: {:?}",
-                        &node.id_path, &node.data
+                        "data node -- node_id: {:?} data: {:?}",
+                        &node.node.borrow().node_id(),
+                        &node.data
                     );
                 }
                 _ => {}
             }
         }
     }
+}
+
+/*
+    创建节点树: 渲染对象树, 事件树, 数据树
+*/
+
+fn header() -> Element {
+    div().width("100%").height("30").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
+}
+
+fn center() -> Element {
+    div().width("100%").height("100%").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
+}
+
+fn footer() -> Element {
+    div().width("100%").height("30").onclick(|clicked| {
+        println!("{:?}", &clicked);
+    })
 }

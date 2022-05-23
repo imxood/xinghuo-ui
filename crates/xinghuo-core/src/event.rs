@@ -1,3 +1,75 @@
+use std::fmt::Debug;
+
+#[derive(Default)]
+pub struct EventListener {
+    pub onclick: Option<Box<dyn FnMut(Click)>>,
+    pub onmouseenter: Option<Box<dyn FnMut(MouseEnter)>>,
+    pub onmouseleave: Option<Box<dyn FnMut(MouseLeave)>>,
+    pub onmousemove: Option<Box<dyn FnMut(MouseMove)>>,
+    pub onmouseout: Option<Box<dyn FnMut(MouseOut)>>,
+    pub onmouseover: Option<Box<dyn FnMut(MouseOver)>>,
+    pub onmouseup: Option<Box<dyn FnMut(MouseUp)>>,
+}
+
+impl EventListener {
+    pub fn is_empty(&self) -> bool {
+        let Self {
+            onclick,
+            onmouseenter,
+            onmouseleave,
+            onmousemove,
+            onmouseout,
+            onmouseover,
+            onmouseup,
+        } = self;
+        onclick.is_none()
+            && onmouseenter.is_none()
+            && onmouseleave.is_none()
+            && onmousemove.is_none()
+            && onmouseout.is_none()
+            && onmouseover.is_none()
+            && onmouseup.is_none()
+    }
+}
+
+macro_rules! debug_event_field {
+    ($debug:ident, $($name:ident),*) => {
+        $(
+            if $name.is_some() {
+                $debug.field(stringify!($name), &"Some");
+            }
+        )*
+    };
+}
+
+impl Debug for EventListener {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self {
+            onclick,
+            onmouseenter,
+            onmouseleave,
+            onmousemove,
+            onmouseout,
+            onmouseover,
+            onmouseup,
+        } = self;
+
+        // let a = &format("{:?}", self.onclick.as_ref().map(|_| ()))[..4];
+        let mut debug = f.debug_struct("Events");
+        debug_event_field!(
+            debug,
+            onclick,
+            onmouseenter,
+            onmouseleave,
+            onmousemove,
+            onmouseout,
+            onmouseover,
+            onmouseup
+        );
+        debug.finish()
+    }
+}
+
 pub trait GlobalEventHandler: Sized {
     fn onclick(self, _callback: impl FnMut(Click) + 'static) -> Self {
         self
